@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+  <link rel="stylesheet" href="./theme/styles.css">
+  <script src="./theme/broadsheet.js"></script>
+  <script src="./core/braid-core.js"></script>
+  <script src="./views/registry.js"></script>
+  <script src="./image-slot.js"></script>
+  <script src="./loader.js"></script>
+  <style>
+    html, body { height: 100%; }
+    body { margin: 0; overflow: hidden; }
+    ::-webkit-scrollbar { width: 9px; height: 9px; }
+    ::-webkit-scrollbar-thumb { background: #d7d3d3; }
+    ::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</helmet>
+<div ref="{{ rootRef }}" style="height:100vh;display:grid;grid-template-rows:auto 1fr;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+
+  <header style="padding:14px 26px 0">
+    <div style="display:flex;align-items:baseline;gap:18px">
+      <h1 style="margin:0;font-size:34px;letter-spacing:-0.025em">The Braid</h1>
+      <sc-for list="{{ views }}" as="v" hint-placeholder-count="2">
+        <span onClick="{{ v.pick }}" style="font-size:12px;text-transform:uppercase;letter-spacing:0.14em;cursor:pointer;color:{{ v.color }};border-bottom:{{ v.rule }};padding-bottom:2px">{{ v.label }}</span>
+      </sc-for>
+      <span style="margin-left:auto;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-neutral-600)">{{ stats }}</span>
+    </div>
+    <div style="height:3px;background:var(--color-text);margin-top:9px"></div>
+    <div style="height:1px;background:var(--color-text);margin-top:2px"></div>
+    <sc-if value="{{ isMap }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;gap:16px;padding:9px 0 2px">
+        <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--color-neutral-600)">Traffic as of</span>
+        <span style="font-size:15px;font-variant-numeric:tabular-nums;min-width:82px">{{ asof }}</span>
+        <input type="range" min="24180" max="24319" value="{{ asofNum }}" onChange="{{ onAsof }}" style="flex:1;accent-color:var(--color-accent);height:2px">
+        <span style="font-size:11px;font-style:italic;color:var(--color-neutral-600)">the ground plan never moves</span>
+      </div>
+    </sc-if>
+  </header>
+
+  <div style="display:grid;grid-template-columns:{{ cols }};min-height:0">
+
+    <sc-if value="{{ railLShut }}" hint-placeholder-val="{{ false }}">
+      <aside onClick="{{ openL }}" style="cursor:pointer;display:flex;align-items:flex-start;justify-content:center;padding-top:22px" style-hover="background:var(--color-neutral-200)">
+        <span style="writing-mode:vertical-rl;font-size:11px;text-transform:uppercase;letter-spacing:0.16em;color:var(--color-neutral-600)">Controls</span>
+      </aside>
+    </sc-if>
+    <sc-if value="{{ railLOpen }}" hint-placeholder-val="{{ true }}">
+    <aside style="padding:20px 20px 20px 26px;overflow-y:auto;display:flex;flex-direction:column;gap:22px">
+      <div onClick="{{ shutL }}" style="font-size:11px;text-transform:uppercase;letter-spacing:0.16em;color:var(--color-neutral-500);cursor:pointer">&larr; hide</div>
+      <div>
+        <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Search the record" style="width:100%;padding:6px 0;border:0;border-bottom:1px solid var(--color-text);background:transparent;font-family:var(--font-body);font-size:15px;color:var(--color-text);outline:none">
+        <sc-for list="{{ results }}" as="r" hint-placeholder-count="0">
+          <div onClick="{{ r.pick }}" style="padding:5px 0;font-size:14px;cursor:pointer;color:var(--color-neutral-700);border-bottom:1px solid var(--color-neutral-200)" style-hover="color:var(--color-accent-700)">{{ r.name }}</div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ isMap }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <div>
+            <h6 style="margin:0 0 8px;color:var(--color-neutral-600)">Pinned</h6>
+            <sc-for list="{{ pinList }}" as="p" hint-placeholder-count="0">
+              <div onClick="{{ p.drop }}" style="font-size:14px;padding:3px 0;cursor:pointer;color:var(--color-accent-700)">{{ p.name }}</div>
+            </sc-for>
+            <div onClick="{{ pinSel }}" style="font-size:14px;padding:3px 0;cursor:pointer;color:var(--color-neutral-700)" style-hover="color:var(--color-accent-700)">save the selection</div>
+            <div onClick="{{ restorePins }}" style="font-size:14px;padding:3px 0;cursor:pointer;color:var(--color-neutral-700)" style-hover="color:var(--color-accent-700)">select the saved set</div>
+            <div onClick="{{ toggleIsolate }}" style="font-size:14px;padding:3px 0;cursor:pointer;color:var(--color-neutral-700)" style-hover="color:var(--color-accent-700)">{{ isolate }}</div>
+          </div>
+          <div>
+            <h6 style="margin:0 0 8px;color:var(--color-neutral-600)">Trace</h6>
+            <div onClick="{{ setA }}" style="font-size:14px;padding:3px 0;cursor:pointer;color:var(--color-neutral-700)" style-hover="color:var(--color-accent-700)">{{ traceA }}</div>
+            <div onClick="{{ setB }}" style="font-size:14px;padding:3px 0;cursor:pointer;color:var(--color-neutral-700)" style-hover="color:var(--color-accent-700)">{{ traceB }}</div>
+            <div onClick="{{ clearTrace }}" style="font-size:13px;padding:3px 0;cursor:pointer;color:var(--color-neutral-500)">clear</div>
+            <p style="font-size:12px;line-height:1.45;color:var(--color-accent-700);font-style:italic;margin-top:8px">{{ traceNote }}</p>
+          </div>
+          <div>
+            <h6 style="margin:0 0 8px;color:var(--color-neutral-600)">Key</h6>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--color-neutral-700)">
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;border-top:3px solid oklch(0.55 0.13 252)"></span>holds post at</div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;border-top:3px solid oklch(0.55 0.13 158)"></span>part of</div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;border-top:3px solid oklch(0.68 0.08 92)"></span>co-appears</div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;border-top:3px solid oklch(0.55 0.15 305)"></span>stance</div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;border-top:3px solid oklch(0.55 0.22 18)"></span>money</div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;border-top:6px solid oklch(0.90 0.14 95)"></span>first selection and its neighbours</div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;border-top:6px solid oklch(0.88 0.10 212)"></span>second selection, and so on</div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;border-top:6px solid #7b2ff7"></span>between two selections</div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;border-top:3px solid #201e1d"></span>traced chain</div>
+              <p style="font-size:12px;line-height:1.45;color:var(--color-neutral-600);font-style:italic;margin:4px 0 0">Line weight is how many records the tie carries. Lanes keep the same order on every road.</p>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;text-align:center;font-size:11px">&#9633;</span>body</div>
+              <div style="display:flex;align-items:center;gap:9px"><span style="width:22px;flex:none;text-align:center;font-size:11px">&#9679;</span>person</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;font-size:13px;color:var(--color-neutral-600)">
+            <span onClick="{{ zoomOut }}" style="cursor:pointer">&minus;</span>
+            <span onClick="{{ zoomIn }}" style="cursor:pointer">+</span>
+            <span onClick="{{ fit }}" style="cursor:pointer">fit</span>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isTree }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <h6 style="margin:0 0 8px;color:var(--color-neutral-600)">Outline</h6>
+          <div onClick="{{ expandAll }}" style="font-size:14px;padding:3px 0;cursor:pointer;color:var(--color-neutral-700)" style-hover="color:var(--color-accent-700)">expand every level</div>
+          <div onClick="{{ collapseAll }}" style="font-size:14px;padding:3px 0;cursor:pointer;color:var(--color-neutral-700)" style-hover="color:var(--color-accent-700)">collapse to roots</div>
+          <p style="font-size:13px;line-height:1.5;color:var(--color-neutral-600);font-style:italic;margin-top:14px">{{ treeNote }}</p>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isGraph }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <h6 style="margin:0 0 8px;color:var(--color-neutral-600)">Scope</h6>
+        <sc-for list="{{ scopes }}" as="s" hint-placeholder-count="2">
+          <div onClick="{{ s.pick }}" style="font-size:14px;padding:3px 0;cursor:pointer;color:{{ s.color }}">{{ s.mark }} {{ s.label }}</div>
+        </sc-for>
+      </div>
+
+      <div>
+        <h6 style="margin:0 0 8px;color:var(--color-neutral-600)">Ties</h6>
+        <sc-for list="{{ tieFilters }}" as="f" hint-placeholder-count="5">
+          <div onClick="{{ f.toggle }}" style="display:flex;align-items:center;gap:9px;padding:4px 0;cursor:pointer;font-size:14px;opacity:{{ f.op }}">
+            <span style="width:22px;height:0;flex:none;border-top:{{ f.rule }}"></span>
+            <span style="flex:1">{{ f.label }}</span>
+            <span style="font-size:12px;color:var(--color-neutral-500)">{{ f.count }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div>
+        <h6 style="margin:0 0 8px;color:var(--color-neutral-600)">Entities</h6>
+        <sc-for list="{{ entFilters }}" as="f" hint-placeholder-count="2">
+          <div onClick="{{ f.toggle }}" style="display:flex;align-items:center;gap:9px;padding:4px 0;cursor:pointer;font-size:14px;opacity:{{ f.op }}">
+            <span style="width:22px;flex:none;text-align:center;font-size:13px">{{ f.mark }}</span>
+            <span style="flex:1">{{ f.label }}</span>
+            <span style="font-size:12px;color:var(--color-neutral-500)">{{ f.count }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin-top:auto;display:flex;gap:14px;font-size:13px;color:var(--color-neutral-600)">
+        <span onClick="{{ zoomOut }}" style="cursor:pointer">&minus;</span>
+        <span onClick="{{ zoomIn }}" style="cursor:pointer">+</span>
+        <span onClick="{{ fit }}" style="cursor:pointer">fit</span>
+      </div>
+      </sc-if>
+    </aside>
+    </sc-if>
+
+    <sc-if value="{{ isMap }}" hint-placeholder-val="{{ true }}">
+      <div style="position:relative;min-height:0;overflow:hidden">
+        <svg ref="{{ svgRef }}" style="display:block;width:100%;height:100%;cursor:grab;touch-action:none" onWheel="{{ onWheel }}" onMouseDown="{{ onDown }}" onMouseMove="{{ onMove }}" onMouseUp="{{ onUp }}" onMouseLeave="{{ onUp }}" onClick="{{ clearSel }}">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="oklch(0.55 0.23 18)"></path></marker>
+          </defs>
+          <g ref="{{ gRef }}">
+            <rect x="0" y="0" width="{{ sheet.w }}" height="{{ sheet.h }}" fill="var(--color-neutral-200)"></rect>
+            <sc-for list="{{ blocks }}" as="b" hint-placeholder-count="0">
+              <rect x="{{ b.x }}" y="{{ b.y }}" width="{{ b.w }}" height="{{ b.h }}" fill="{{ b.fill }}" stroke="var(--color-text)" strokeWidth="{{ b.sw }}"></rect>
+            </sc-for>
+            <sc-for list="{{ districts }}" as="d" hint-placeholder-count="0">
+              <g>
+                <rect x="{{ d.x }}" y="{{ d.y }}" width="{{ d.w }}" height="{{ d.h }}" rx="3" fill="{{ d.fill }}" stroke="{{ d.stroke }}" strokeWidth="{{ d.sw }}"></rect>
+                <sc-if value="{{ d.show }}" hint-placeholder-val="{{ false }}"><text x="{{ d.nx }}" y="{{ d.ny }}" fontSize="{{ d.fs }}" fill="var(--color-neutral-600)" pointerEvents="none" style="font-family:var(--font-body);letter-spacing:0.12em">{{ d.name }}</text></sc-if>
+              </g>
+            </sc-for>
+            <sc-for list="{{ locals }}" as="v" hint-placeholder-count="0">
+              <line x1="{{ v.x1 }}" y1="{{ v.y1 }}" x2="{{ v.x2 }}" y2="{{ v.y2 }}" stroke="{{ v.color }}" strokeWidth="{{ wLocal }}" opacity="{{ v.op }}"></line>
+            </sc-for>
+            <sc-for list="{{ highlights }}" as="h" hint-placeholder-count="0">
+              <polyline points="{{ h.d }}" fill="none" stroke="{{ h.color }}" strokeWidth="{{ wHi }}" opacity="0.75" strokeLinejoin="round" strokeLinecap="round"></polyline>
+            </sc-for>
+            <sc-for list="{{ betweens }}" as="bt" hint-placeholder-count="0">
+              <polyline points="{{ bt.d }}" fill="none" stroke="#7b2ff7" strokeWidth="{{ wBetween }}" opacity="0.9" strokeLinejoin="round" strokeLinecap="round"></polyline>
+            </sc-for>
+            <sc-for list="{{ roads }}" as="r" hint-placeholder-count="0">
+              <polyline points="{{ r.d }}" fill="none" stroke="{{ r.color }}" strokeWidth="{{ r.w }}" strokeDasharray="{{ r.dash }}" markerEnd="{{ r.marker }}" opacity="{{ r.op }}" strokeLinejoin="round" strokeLinecap="round"></polyline>
+            </sc-for>
+            <sc-for list="{{ flows }}" as="f" hint-placeholder-count="0">
+              <polyline points="{{ f.d }}" fill="none" stroke="{{ f.color }}" strokeWidth="{{ f.w }}" strokeDasharray="{{ f.dash }}" markerEnd="{{ f.marker }}" strokeLinejoin="round"></polyline>
+            </sc-for>
+            <sc-for list="{{ trace }}" as="t" hint-placeholder-count="0">
+              <polyline points="{{ t.d }}" fill="none" stroke="#201e1d" strokeWidth="{{ wTrace }}" opacity="0.9" strokeLinejoin="round"></polyline>
+            </sc-for>
+            <sc-for list="{{ nameLines }}" as="ln" hint-placeholder-count="0">
+              <text x="{{ ln.x }}" y="{{ ln.y }}" fontSize="{{ ln.fs }}" fill="{{ ln.color }}" fontWeight="{{ ln.weight }}" stroke="var(--color-bg)" strokeWidth="{{ ln.halo }}" strokeLinejoin="round" pointerEvents="none" style="font-family:var(--font-heading);letter-spacing:0.05em;paint-order:stroke fill">{{ ln.t }}</text>
+            </sc-for>
+            <sc-for list="{{ marks }}" as="n" hint-placeholder-count="0">
+              <g onClick="{{ n.pick }}" style="cursor:pointer" data-mark="1">
+                <sc-if value="{{ n.isOrg }}" hint-placeholder-val="{{ false }}">
+                  <rect x="{{ n.rx }}" y="{{ n.ry }}" width="{{ n.side }}" height="{{ n.side }}" fill="{{ n.fill }}" stroke="{{ n.stroke }}" strokeWidth="{{ n.sw }}" opacity="{{ n.op }}"></rect>
+                </sc-if>
+                <sc-if value="{{ n.isPerson }}" hint-placeholder-val="{{ false }}">
+                  <circle cx="{{ n.x }}" cy="{{ n.y }}" r="{{ n.r }}" fill="{{ n.fill }}" stroke="{{ n.stroke }}" strokeWidth="{{ n.sw }}" opacity="{{ n.op }}"></circle>
+                </sc-if>
+                <sc-if value="{{ n.isSel }}" hint-placeholder-val="{{ false }}">
+                  <circle cx="{{ n.x }}" cy="{{ n.y }}" r="{{ n.ring }}" fill="none" stroke="{{ n.ringColor }}" strokeWidth="{{ n.sw }}" opacity="0.95"></circle>
+                </sc-if>
+                <sc-if value="{{ n.showLabel }}" hint-placeholder-val="{{ false }}">
+                  <text x="{{ n.tx }}" y="{{ n.ty }}" fontSize="{{ n.fs }}" fill="{{ n.lc }}" opacity="{{ n.op }}" stroke="var(--color-bg)" strokeWidth="{{ n.halo }}" strokeLinejoin="round" pointerEvents="none" style="font-family:var(--font-body);paint-order:stroke fill">{{ n.label }}</text>
+                </sc-if>
+              </g>
+            </sc-for>
+          </g>
+        </svg>
+        <sc-if value="{{ busy }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;inset:0;display:grid;place-items:center;font-size:14px;color:var(--color-neutral-600);letter-spacing:0.06em;text-transform:uppercase">{{ busyText }}</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isGraph }}" hint-placeholder-val="{{ false }}">
+    <div style="position:relative;min-height:0;overflow:hidden">
+      <svg ref="{{ svgRef }}" style="display:block;width:100%;height:100%;cursor:grab;touch-action:none" onWheel="{{ onWheel }}" onMouseDown="{{ onDown }}" onMouseMove="{{ onMove }}" onMouseUp="{{ onUp }}" onMouseLeave="{{ onUp }}">
+        <g ref="{{ gRef }}">
+          <sc-for list="{{ edges }}" as="e" hint-placeholder-count="0">
+            <line x1="{{ e.x1 }}" y1="{{ e.y1 }}" x2="{{ e.x2 }}" y2="{{ e.y2 }}" stroke="{{ e.color }}" strokeWidth="{{ e.w }}" strokeDasharray="{{ e.dash }}" opacity="{{ e.op }}"></line>
+          </sc-for>
+          <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="0">
+            <g transform="{{ n.tf }}" onClick="{{ n.pick }}" onMouseEnter="{{ n.enter }}" onMouseLeave="{{ n.leave }}" style="cursor:pointer">
+              <sc-if value="{{ n.isOrg }}" hint-placeholder-val="{{ false }}">
+                <rect x="{{ n.ox }}" y="{{ n.ox }}" width="{{ n.side }}" height="{{ n.side }}" fill="{{ n.fill }}" stroke="{{ n.stroke }}" strokeWidth="{{ n.sw }}" opacity="{{ n.op }}"></rect>
+              </sc-if>
+              <sc-if value="{{ n.isPerson }}" hint-placeholder-val="{{ false }}">
+                <circle r="{{ n.r }}" fill="{{ n.fill }}" stroke="{{ n.stroke }}" strokeWidth="{{ n.sw }}" opacity="{{ n.op }}"></circle>
+              </sc-if>
+              <sc-if value="{{ n.showLabel }}" hint-placeholder-val="{{ false }}">
+                <text x="{{ n.lx }}" y="{{ n.ly }}" fontSize="{{ n.fs }}" textAnchor="{{ n.anchor }}" fill="{{ n.lc }}" opacity="{{ n.lop }}" stroke="var(--color-bg)" strokeWidth="{{ n.halo }}" strokeLinejoin="round" pointerEvents="none" style="font-family:var(--font-body);paint-order:stroke fill">{{ n.label }}</text>
+              </sc-if>
+            </g>
+          </sc-for>
+        </g>
+      </svg>
+      <sc-if value="{{ busy }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute;inset:0;display:grid;place-items:center;font-size:14px;color:var(--color-neutral-600);letter-spacing:0.06em;text-transform:uppercase">{{ busyText }}</div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isTree }}" hint-placeholder-val="{{ false }}">
+      <div style="min-height:0;overflow-y:auto;padding:22px 40px 60px 8px">
+        <div style="max-width:660px">
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+            <div onClick="{{ r.pick }}" style="display:flex;align-items:baseline;gap:8px;padding:{{ r.pad }};cursor:pointer" style-hover="background:var(--color-neutral-200)">
+              <span onClick="{{ r.toggle }}" style="width:15px;flex:none;font-size:11px;color:var(--color-neutral-500);align-self:center">{{ r.caret }}</span>
+              <span style="font-size:{{ r.fs }};line-height:1.25;font-weight:{{ r.fw }};color:{{ r.color }};font-style:{{ r.style }}">{{ r.name }}</span>
+              <span style="flex:1;min-width:10px;border-bottom:1px dotted var(--color-neutral-300);transform:translateY(-3px)"></span>
+              <span style="flex:none;font-size:12px;color:var(--color-neutral-600);font-style:italic;white-space:nowrap">{{ r.meta }}</span>
+            </div>
+          </sc-for>
+
+          <h6 style="margin:34px 0 10px;color:var(--color-neutral-600)">Unattached bodies</h6>
+          <div style="display:flex;flex-wrap:wrap;gap:2px 26px">
+            <sc-for list="{{ singles }}" as="s" hint-placeholder-count="10">
+              <div onClick="{{ s.pick }}" style="cursor:pointer;font-size:15px;padding:3px 0;color:{{ s.color }}" style-hover="color:var(--color-accent-700)">{{ s.name }}<span style="font-size:12px;color:var(--color-neutral-500);font-style:italic">{{ s.meta }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ railRShut }}" hint-placeholder-val="{{ false }}">
+      <aside onClick="{{ openR }}" style="cursor:pointer;display:flex;align-items:flex-start;justify-content:center;padding-top:22px" style-hover="background:var(--color-neutral-200)">
+        <span style="writing-mode:vertical-rl;font-size:11px;text-transform:uppercase;letter-spacing:0.16em;color:var(--color-neutral-600)">Record</span>
+      </aside>
+    </sc-if>
+    <sc-if value="{{ railROpen }}" hint-placeholder-val="{{ true }}">
+    <aside style="padding:20px 26px 26px 20px;overflow-y:auto">
+      <div onClick="{{ shutR }}" style="font-size:11px;text-transform:uppercase;letter-spacing:0.16em;color:var(--color-neutral-500);cursor:pointer;margin-bottom:12px">hide &rarr;</div>
+      <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:14px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--color-neutral-600)">{{ selCount }}</div>
+            <div onClick="{{ clearSel }}" style="margin-left:auto;font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--color-neutral-500);cursor:pointer" style-hover="color:var(--color-accent-700)">clear all</div>
+          </div>
+          <p style="font-size:12px;line-height:1.45;color:var(--color-neutral-600);font-style:italic;margin:0 0 16px">{{ selHint }}</p>
+          <sc-for list="{{ records }}" as="rec" hint-placeholder-count="1">
+            <div style="margin-bottom:22px">
+              <div onClick="{{ rec.toggle }}" style="display:flex;align-items:baseline;gap:10px;cursor:pointer;border-top:2px solid var(--color-text);padding-top:8px">
+                <span style="font-size:11px;color:var(--color-neutral-500);width:10px;flex:none">{{ rec.caret }}</span>
+                <span style="width:12px;height:12px;flex:none;background:{{ rec.swatch }};align-self:center"></span>
+                <div style="flex:1">
+                  <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.14em;color:var(--color-accent-700)">{{ rec.kind }}</div>
+                  <h2 style="margin:2px 0 0;font-size:22px;line-height:1.12">{{ rec.name }}</h2>
+                </div>
+                <span onClick="{{ rec.drop }}" style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--color-neutral-500);cursor:pointer" style-hover="color:var(--color-accent-700)">remove</span>
+              </div>
+              <sc-if value="{{ rec.open }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:10px">
+                  <div style="display:flex;gap:14px;align-items:flex-start">
+                    <div style="flex:none;width:88px;height:110px">
+                      <image-slot id="{{ rec.slot }}" shape="rect" fit="cover" placeholder="portrait"></image-slot>
+                    </div>
+                    <div style="font-size:14px;font-style:italic;color:var(--color-neutral-700);flex:1">{{ rec.sub }}</div>
+                  </div>
+                  <sc-if value="{{ rec.hasNotes }}" hint-placeholder-val="{{ false }}">
+                    <p style="font-size:14px;line-height:1.5;margin-top:10px">{{ rec.notes }}</p>
+                  </sc-if>
+                  <sc-if value="{{ rec.hasBetween }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:14px">
+                      <h6 style="margin:0 0 6px;color:#7b2ff7">Direct to your other selections</h6>
+                      <sc-for list="{{ rec.between }}" as="t" hint-placeholder-count="0">
+                        <div style="padding:5px 0;border-bottom:1px solid var(--color-neutral-200);font-size:14px">
+                          <span style="color:#7b2ff7">{{ t.verb }}</span> {{ t.other }}
+                          <div style="font-size:12px;color:var(--color-neutral-600);font-style:italic">{{ t.detail }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ rec.hasPositions }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:14px">
+                      <h6 style="margin:0 0 6px;color:var(--color-neutral-600)">Positions</h6>
+                      <sc-for list="{{ rec.positions }}" as="p" hint-placeholder-count="0">
+                        <div style="font-size:14px;padding:3px 0;color:{{ p.color }}">{{ p.title }}<span style="color:var(--color-neutral-500)">{{ p.when }}</span></div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ rec.hasTies }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:16px">
+                      <h6 style="margin:0 0 6px;color:var(--color-neutral-600)">Ties</h6>
+                      <sc-for list="{{ rec.ties }}" as="t" hint-placeholder-count="0">
+                        <div onClick="{{ t.pick }}" style="padding:6px 0;border-bottom:1px solid var(--color-neutral-200);cursor:pointer;font-size:14px">
+                          <span style="color:{{ t.color }}">{{ t.verb }}</span> {{ t.other }}
+                          <div style="font-size:12px;color:var(--color-neutral-600);font-style:italic">{{ t.detail }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ rec.hasEvents }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:16px">
+                      <h6 style="margin:0 0 6px;color:var(--color-neutral-600)">In the record</h6>
+                      <sc-for list="{{ rec.events }}" as="ev" hint-placeholder-count="0">
+                        <div style="padding:9px 0;border-bottom:1px solid var(--color-neutral-200)">
+                          <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:{{ ev.color }}">{{ ev.date }} &middot; {{ ev.confidence }}</div>
+                          <div style="font-size:14px;line-height:1.45;margin-top:3px">{{ ev.summary }}</div>
+                          <sc-for list="{{ ev.sources }}" as="s" hint-placeholder-count="0">
+                            <a href="{{ s.url }}" target="_blank" style="font-size:12px;color:var(--color-accent-700);margin-right:10px">{{ s.outlet }}</a>
+                          </sc-for>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ noSel }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <h6 style="margin:0 0 10px;color:var(--color-neutral-600)">Most connected</h6>
+          <sc-for list="{{ top }}" as="t" hint-placeholder-count="8">
+            <div onClick="{{ t.pick }}" style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--color-neutral-200);cursor:pointer;font-size:14px">
+              <span style="flex:1">{{ t.name }}</span>
+              <span style="font-size:12px;color:var(--color-neutral-500)">{{ t.deg }}</span>
+            </div>
+          </sc-for>
+          <p style="font-size:13px;line-height:1.5;color:var(--color-neutral-600);margin-top:18px;font-style:italic">Click any mark to read its record. Drag to pan, scroll to zoom.</p>
+        </div>
+      </sc-if>
+    </aside>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;scope&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;records&quot;,&quot;everything&quot;],&quot;default&quot;:&quot;records&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Graph&quot;},&quot;showAllLabels&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Graph&quot;},&quot;spread&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0.6,&quot;max&quot;:2,&quot;step&quot;:0.1,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Graph&quot;}}">
+const TIE = {
+  position:  { label: 'holds post at', color: '#bab6b6', w: 1,   dash: '',      dist: 74,  verb: 'post at' },
+  part_of:   { label: 'part of',       color: '#9b9797', w: 1,   dash: '3 3',   dist: 58,  verb: 'part of' },
+  coappear:  { label: 'co-appears',    color: '#d7d3d3', w: 1,   dash: '',      dist: 118, verb: 'with' },
+  money:     { label: 'money',         color: '#d6006c', w: 1.8, dash: '',      dist: 132, verb: 'money' },
+  stance:    { label: 'stance',        color: '#0088b0', w: 1.5, dash: '5 3',   dist: 122, verb: 'stance' }
+};
+const ORDER = ['position', 'part_of', 'coappear', 'money', 'stance'];
+const CONF = { verified: '#605d5d', disputed: '#aa0b56', speculative: '#006786' };
+
+const SELC = [
+  { wash: 'oklch(0.90 0.14 95)',  solid: 'oklch(0.74 0.16 95)'  },
+  { wash: 'oklch(0.88 0.10 212)', solid: 'oklch(0.68 0.14 212)' },
+  { wash: 'oklch(0.88 0.11 350)', solid: 'oklch(0.68 0.17 350)' },
+  { wash: 'oklch(0.89 0.11 150)', solid: 'oklch(0.66 0.14 150)' },
+  { wash: 'oklch(0.88 0.10 292)', solid: 'oklch(0.66 0.16 292)' },
+  { wash: 'oklch(0.89 0.12 48)',  solid: 'oklch(0.70 0.17 48)'  }
+];
+const selLivery = (chosen, id) => SELC[Math.max(chosen.indexOf(id), 0) % SELC.length];
+
+class Component extends DCLogic {
+  state = {
+    err: null, busy: true, nodes: [], edges: [], sel: null, hover: null, q: '',
+    tie: { position: true, part_of: true, coappear: true, money: true, stance: true },
+    ent: { person: true, org: true }, scope: 'records', k: 1, mode: 'map', open: {},
+    asof: '2026-08-09', pins: [], isolate: false, thread: null, traceA: null, traceB: null, selSet: [], recOpen: {},
+    railL: true, railR: true
+  };
+
+  componentDidMount() {
+    this.svgRef = React.createRef(); this.gRef = React.createRef(); this._ref = React.createRef();
+    this.view = { k: 1, x: 0, y: 0 };
+    const scope = this.props.scope;
+    if (scope && scope !== this.state.scope) this.state.scope = scope;
+    this._esc = e => { if (e.key === 'Escape' && this.state.sel) this.setState({ sel: null, selSet: [] }); };
+    window.addEventListener('keydown', this._esc);
+    /* loader.js decides plaintext vs. passphrase-gated ciphertext; the shell
+       only ever sees the record. */
+    window.BraidData.load()
+      .then(db => { this.db = db; this.index(); this.rebuild(); })
+      .catch(e => this.setState({ err: String(e), busy: false }));
+  }
+
+  componentWillUnmount() { window.removeEventListener('keydown', this._esc); }
+
+  componentDidUpdate(prev) {
+    if (prev.scope !== this.props.scope && this.props.scope) {
+      this.state.scope = this.props.scope; this.rebuild();
+    } else if (prev.spread !== this.props.spread || prev.showAllLabels !== this.props.showAllLabels) {
+      this.rebuild();
+    }
+  }
+
+  /* ---------- indexing: nodes, ties and event counts, per the braid schema ---------- */
+  /* the shell owns the loaded braid and hands the same indexed model to every view;
+     the model itself lives in core/braid-core.js and is built exactly once */
+  index() {
+    const m = BraidCore.index(this.db);
+    this.model = m;
+    this.actorMap = m.actorMap; this.orgMap = m.orgMap; this.ties = m.ties;
+    this.evc = m.evc; this.evOf = m.evOf;
+    this.kids = m.kids; this.posts = m.posts; this.subtree = m.subtree;
+    this.roots = m.roots; this.loose = m.loose;
+    const open = {}; this.roots.forEach(id => { open[id] = true; });
+    this.state.open = open;
+    this.buildMap();
+  }
+
+  /* ══ GROUND PLAN ══ the map's fixed geography, built once from part_of. Only bodies that
+     contain other bodies get a beltway; a leaf body is a mark inside its parent. The as-of
+     date never moves any of this. */
+  buildMap() {
+    const W = 4600, H = 2900, PAD = [56, 44, 34, 28, 24];
+    const rankT = t => {
+      const s = String(t || '').toLowerCase();
+      if (/president|secretary of|attorney general|chair|speaker|governor|mayor|founder|chief executive|director of national intelligence|justice/.test(s)) return 0;
+      if (/deputy|vice pres|vice chair|chief of staff|senior advis/.test(s)) return 1;
+      if (/direct|advis|counsel|press secretary|administrator|commissioner|officer|head of/.test(s)) return 2;
+      return 3;
+    };
+    this.home = {}; this.reach = {};
+    (this.db.actors || []).forEach(a => {
+      const ps = (a.positions || []).filter(p => this.orgMap[p.entity]);
+      if (!ps.length) { this.home[a.id] = null; this.reach[a.id] = []; return; }
+      const live = ps.filter(p => this.live(p)), use = live.length ? live : ps;
+      let best = use[0];
+      use.forEach(p => { if (rankT(p.title) < rankT(best.title)) best = p; });
+      this.home[a.id] = best.entity;
+      this.reach[a.id] = ps.map(p => p.entity).filter((v, i, r) => r.indexOf(v) === i);
+    });
+    const staff = {};
+    Object.keys(this.home).forEach(id => { const o = this.home[id]; if (o) (staff[o] = staff[o] || []).push(id); });
+    const loose = Object.keys(this.home).filter(id => !this.home[id]);
+
+    const build = id => {
+      const kids = this.kids[id] || [], people = staff[id] || [];
+      const n = { id: id, name: this.shortLabel(id), people: people, kids: [] };
+      if (!kids.length) { n.kind = 'cell'; n.weight = Math.max(4, 2 + people.length); return n; }
+      n.kind = 'district';
+      n.kids = kids.map(build);
+      n.kids.unshift({ id: id + '::core', kind: 'cell', name: this.shortLabel(id), org: id, people: people, kids: [], weight: Math.max(4, 2 + people.length) });
+      n.weight = n.kids.reduce((s, c) => s + c.weight, 0);
+      return n;
+    };
+    const roots = this.roots.map(build);
+    if (this.loose.length) roots.push({ id: '::unattached', kind: 'district', name: 'Unattached bodies', people: [], kids: this.loose.map(build), weight: this.loose.reduce((s, id) => s + 2 + (staff[id] || []).length, 0) });
+    if (loose.length) roots.push({ id: '::unaffiliated', kind: 'cell', name: 'No post on record', people: loose, kids: [], weight: 1 + loose.length * 0.5 });
+    const plan = { id: '::map', kind: 'district', name: '', people: [], kids: roots, weight: roots.reduce((s, c) => s + c.weight, 0) };
+
+    /* recursive binary split, orientation by aspect — always terminates, and the padding
+       it leaves between siblings is what the roads will run in */
+    /* the gap a node leaves around itself: the higher the body sits, the wider the road
+       between it and its neighbour. Depth 0 is the sheet, which needs no margin. */
+    const GAP = 40, GAPD = [0, 58, 38, 26, 18];
+    const place = (node, x, y, w, h, depth) => {
+      node.depth = depth;
+      const want = node.kind === 'district' ? GAPD[Math.min(depth, GAPD.length - 1)] : GAP;
+      const g = Math.max(0, Math.min(want, w * 0.12, h * 0.12));
+      node.x = x + g; node.y = y + g;
+      node.w = Math.max(w - g * 2, 8); node.h = Math.max(h - g * 2, 8);
+      if (node.kind !== 'district') return;
+      x = node.x; y = node.y; w = node.w; h = node.h;
+      const p = PAD[Math.min(depth, PAD.length - 1)];
+      const ix = x + p, iy = y + p, iw = Math.max(w - p * 2, 10), ih = Math.max(h - p * 2, 10);
+      node.inner = { x: ix, y: iy, w: iw, h: ih };
+      const cut = (items, cx, cy, cw, ch) => {
+        if (!items.length) return;
+        if (items.length === 1) { place(items[0], cx, cy, cw, ch, depth + 1); return; }
+        const total = items.reduce((s, i) => s + i.weight, 0);
+        let acc = 0, k = 0, bestD = 1e9;
+        for (let i = 0; i < items.length - 1; i++) {
+          acc += items[i].weight;
+          const d = Math.abs(acc / total - 0.5);
+          if (d < bestD) { bestD = d; k = i + 1; }
+        }
+        const a = items.slice(0, k), b = items.slice(k);
+        const fa = a.reduce((s, i) => s + i.weight, 0) / total;
+        if (cw >= ch) { cut(a, cx, cy, cw * fa, ch); cut(b, cx + cw * fa, cy, cw * (1 - fa), ch); }
+        else { cut(a, cx, cy, cw, ch * fa); cut(b, cx, cy + ch * fa, cw, ch * (1 - fa)); }
+      };
+      cut(node.kids.slice().sort((a, b) => b.weight - a.weight), ix, iy, iw, ih);
+    };
+    place(plan, 0, 0, W, H, 0);
+
+    /* flatten: districts carry rings, cells carry marks */
+    this.districts = []; this.cells = []; this.markOf = {}; this.cellOf = {};
+    this.distHue = {};
+    let hueN = 0;
+    const walk = (n, root, hue, taken) => {
+      const r = n.depth === 1 ? n.id : root;
+      n.rootId = r;
+      if (n.kind === 'district') {
+        /* the golden angle spreads hues well but knows nothing about the tree, so a child
+           could land beside its parent. Keep advancing until it is clear of the body it
+           sits inside. */
+        let h = hue;
+        if (n.id !== '::map') {
+          const apart = (a, b) => { const d = Math.abs((a - b) % 360); return Math.min(d, 360 - d); };
+          for (let guard = 0; guard < 96; guard++) {
+            h = (hueN++ * 137.508) % 360;
+            const clearParent = hue == null || apart(h, hue) >= 45;
+            const clearKin = taken.every(t => apart(h, t) >= 40);
+            if (clearParent && clearKin) break;
+          }
+          taken.push(h);
+        }
+        this.distHue[n.id] = h;
+        n.hue = h;
+        if (n.id !== '::map') this.districts.push(n);
+        const kin = [];
+        n.kids.forEach(k => walk(k, r, h, kin));
+        return;
+      }
+      n.hue = hue;
+      this.cells.push(n);
+      /* the name plate takes the top of the block; the marks fill what is left */
+      const orgId = n.org || (this.orgMap[n.id] ? n.id : null);
+      const pad = Math.min(9, n.w / 5, n.h / 5);
+      n.plate = (orgId && !n.org) ? this.wrapName(this.orgMap[orgId].name, n.w - pad * 2, n.h * 0.42, this.orgMap[orgId].acronym) : null;
+      let band = n.plate ? n.plate.h + 8 : 0;
+      if (band > n.h * 0.55) { n.plate = null; band = 0; } /* a plate that will not fit is not set */
+      const ix = n.x + pad, iy = n.y + pad + band;
+      const iw = Math.max(n.w - pad * 2, 1), ih = Math.max(n.h - pad * 2 - band, 1);
+      const items = [];
+      if (n.org || !String(n.id).startsWith('::')) items.push({ id: n.org || n.id, org: true });
+      n.people.forEach(id => items.push({ id: id, org: false }));
+      const cols = Math.max(1, Math.round(Math.sqrt(items.length * (iw / Math.max(ih, 1)))));
+      const rows = Math.ceil(items.length / cols), sx = iw / cols, sy = ih / rows;
+      items.forEach((it, i) => {
+        const c = i % cols, r = (i / cols) | 0;
+        const mx = Math.min(Math.max(ix + sx * (c + 0.5), n.x + 1), n.x + n.w - 1);
+        const my = Math.min(Math.max(iy + sy * (r + 0.5), n.y + 1), n.y + n.h - 1);
+        this.markOf[it.id] = { id: it.id, org: it.org, x: mx, y: my, cell: n.id };
+        this.cellOf[it.id] = n;
+      });
+      n.items = items;
+    };
+    walk(plan, null, null, []);
+    this.plan = plan; this.mapSize = { w: W, h: H };
+
+    this.buildRoads();
+  }
+
+  /* a name set to the space it owns: the largest size at which it still breaks into the
+     block, falling back to the acronym when even that will not sit */
+  wrapName(name, maxW, maxH, acronym) {
+    const fit = (txt, fs) => {
+      const words = String(txt).toUpperCase().split(/\s+/), lines = [];
+      let cur = '';
+      const wide = t => t.length * fs * 0.62;
+      for (let i = 0; i < words.length; i++) {
+        const t = cur ? cur + ' ' + words[i] : words[i];
+        if (cur && wide(t) > maxW) { lines.push(cur); cur = words[i]; } else cur = t;
+        if (wide(cur) > maxW && !cur.includes(' ')) { /* a single word too wide: allow it */ }
+      }
+      if (cur) lines.push(cur);
+      const w = Math.max.apply(null, lines.map(wide));
+      return { lines: lines, fs: fs, w: w, h: lines.length * fs * 1.16 };
+    };
+    for (let fs = Math.min(maxH * 0.62, maxW * 0.2, 46); fs >= 7; fs -= 1) {
+      const r = fit(name, fs);
+      if (r.w <= maxW && r.h <= maxH) return r;
+    }
+    if (acronym) {
+      for (let fs = Math.min(maxH * 0.8, 40); fs >= 6; fs -= 1) {
+        const r = fit(acronym, fs);
+        if (r.w <= maxW && r.h <= maxH) return r;
+      }
+    }
+    const r = fit(acronym || name, 6.5);
+    return r.w <= maxW * 1.15 ? r : null;
+  }
+
+  /* ══ ROADS ══ a corridor lattice over the ground plan. Cells are solid; roads run in the
+     padding between them and stop at each cell's junction, where driveways take over. */
+  buildRoads() {
+    const S = 14, W = this.mapSize.w, H = this.mapSize.h;
+    const gw = Math.ceil(W / S), gh = Math.ceil(H / S);
+    const blocked = new Uint8Array(gw * gh);
+    this.cells.forEach(c => {
+      const x0 = Math.floor(c.x / S), x1 = Math.ceil((c.x + c.w) / S), y0 = Math.floor(c.y / S), y1 = Math.ceil((c.y + c.h) / S);
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (x >= 0 && y >= 0 && x < gw && y < gh) blocked[y * gw + x] = 1;
+    });
+    const free = i => i >= 0 && i < gw * gh && !blocked[i];
+    /* how far each free square sits from the nearest block: the width of the road it
+       stands in. Routes are priced by it, so traffic collects in the boulevards between
+       structures instead of threading the alleys. */
+    const open = new Uint8Array(gw * gh);
+    (() => {
+      const q = [];
+      for (let i = 0; i < gw * gh; i++) if (blocked[i]) { open[i] = 0; q.push(i); }
+      let head = 0;
+      while (head < q.length) {
+        const c = q[head++], cx = c % gw, cy = c / gw | 0, d = open[c];
+        if (d >= 6) continue;
+        for (let i = 0; i < 4; i++) {
+          const n = i === 0 ? (cx > 0 ? c - 1 : -1) : i === 1 ? (cx < gw - 1 ? c + 1 : -1)
+            : i === 2 ? (cy > 0 ? c - gw : -1) : (cy < gh - 1 ? c + gw : -1);
+          if (n < 0 || open[n] || blocked[n]) continue;
+          open[n] = d + 1; q.push(n);
+        }
+      }
+    })();
+    /* junction: the corridor square just outside a cell, its on/off ramp */
+    const junction = c => {
+      const cx = Math.round((c.x + c.w / 2) / S), cy = Math.round((c.y + c.h / 2) / S);
+      const tries = [
+        [cx, Math.floor(c.y / S) - 1], [cx, Math.ceil((c.y + c.h) / S)],
+        [Math.floor(c.x / S) - 1, cy], [Math.ceil((c.x + c.w) / S), cy]
+      ];
+      for (let i = 0; i < tries.length; i++) {
+        const x = tries[i][0], y = tries[i][1];
+        if (x >= 0 && y >= 0 && x < gw && y < gh && free(y * gw + x)) return y * gw + x;
+      }
+      for (let r = 2; r < 8; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        const x = cx + dx, y = cy + dy;
+        if (x >= 0 && y >= 0 && x < gw && y < gh && free(y * gw + x)) return y * gw + x;
+      }
+      return -1;
+    };
+    this.junc = {};
+    this.cells.forEach(c => { this.junc[c.id] = junction(c); });
+
+    /* A* on the corridor lattice with a binary heap — a linear open list makes this
+       quadratic and hangs the page on a grid this size */
+    const N = gw * gh, g = new Int32Array(N), from = new Int32Array(N), stamp = new Int32Array(N), dir = new Int8Array(N);
+    let era = 0, hn = 0;
+    const CAP = N * 4 + 16, hp = new Int32Array(CAP), hf = new Int32Array(CAP);
+    const push = (v, fv) => {
+      if (hn >= CAP - 1) return; /* a full heap must drop the worst candidate, never overflow */
+      let i = hn++; hp[i] = v; hf[i] = fv;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (hf[p] <= hf[i]) break;
+        const tv = hp[p], tf = hf[p]; hp[p] = hp[i]; hf[p] = hf[i]; hp[i] = tv; hf[i] = tf; i = p;
+      }
+    };
+    const pop = () => {
+      const top = hp[0];
+      hn--; hp[0] = hp[hn]; hf[0] = hf[hn];
+      let i = 0;
+      for (;;) {
+        const l = i * 2 + 1, r = l + 1;
+        let s = i;
+        if (l < hn && hf[l] < hf[s]) s = l;
+        if (r < hn && hf[r] < hf[s]) s = r;
+        if (s === i) break;
+        const tv = hp[s], tf = hf[s]; hp[s] = hp[i]; hf[s] = hf[i]; hp[i] = tv; hf[i] = tf; i = s;
+      }
+      return top;
+    };
+    const astar = (a, b) => {
+      if (a < 0 || b < 0) return null;
+      era++; hn = 0;
+      const bx = b % gw, by = b / gw | 0;
+      g[a] = 0; from[a] = -1; stamp[a] = era; dir[a] = -1;
+      push(a, (Math.abs(a % gw - bx) + Math.abs((a / gw | 0) - by)) * 4);
+      while (hn) {
+        const cur = pop();
+        if (cur === b) {
+          const path = [cur];
+          let p = cur;
+          while (from[p] >= 0) { p = from[p]; path.push(p); }
+          return path.reverse();
+        }
+        const cx = cur % gw, cy = cur / gw | 0, cd = dir[cur];
+        for (let i = 0; i < 4; i++) {
+          const n = i === 0 ? (cx > 0 ? cur - 1 : -1) : i === 1 ? (cx < gw - 1 ? cur + 1 : -1)
+            : i === 2 ? (cy > 0 ? cur - gw : -1) : (cy < gh - 1 ? cur + gw : -1);
+          if (n < 0 || (blocked[n] && n !== b)) continue;
+          const ng = g[cur] + (14 - Math.min(open[n], 5) * 2) + (cd >= 0 && cd !== i ? 40 : 0);
+          if (stamp[n] === era && g[n] <= ng) continue;
+          stamp[n] = era; g[n] = ng; from[n] = cur; dir[n] = i;
+          push(n, ng + (Math.abs(n % gw - bx) + Math.abs((n / gw | 0) - by)) * 4);
+        }
+      }
+      return null;
+    };
+
+    const routeCache = {};
+    this.roadTies = [];
+    this.ties.forEach(t => {
+      const ca = this.cellOf[t.from], cb = this.cellOf[t.to];
+      if (!ca || !cb) return;
+      const rec = { tie: t, sameCell: ca.id === cb.id, path: null, ca: ca.id, cb: cb.id };
+      if (!rec.sameCell) {
+        const key = ca.id + '>' + cb.id;
+        if (!(key in routeCache)) routeCache[key] = astar(this.junc[ca.id], this.junc[cb.id]);
+        rec.path = routeCache[key];
+      }
+      this.roadTies.push(rec);
+    });
+    this.gridS = S; this.gw = gw;
+    /* driveways: every mark's own ramp onto the network */
+    this.drives = [];
+    Object.keys(this.markOf).forEach(id => {
+      const m = this.markOf[id], j = this.junc[m.cell];
+      if (j == null || j < 0) return;
+      const p = { x: (j % gw + 0.5) * S, y: ((j / gw | 0) + 0.5) * S };
+      this.drives.push({ x1: m.x, y1: m.y, x2: p.x, y2: p.y });
+    });
+    this.traffic(this.state.asof);
+    window.__braid = this;
+  }
+
+  /* a tie is open at a date, or it is not: posts by their term, records by their date,
+     nesting always. Nothing here touches the ground plan. */
+  openAt(t, asof) { return BraidCore.openAt(t, asof); }
+
+  /* one lane per relationship, in the same order on every road: posts on the inside,
+     money on the outside. A lane exists on a stretch only if that relationship uses it. */
+  traffic(asof) {
+    const S = this.gridS, gw = this.gw, LANES = ['position', 'part_of', 'coappear', 'stance', 'money'];
+    const usage = {};
+    LANES.forEach(t => { usage[t] = new Map(); });
+    this.roadTies.forEach(rec => {
+      if (!rec.path || !this.openAt(rec.tie, asof)) return;
+      const u = usage[rec.tie.type];
+      if (!u) return;
+      for (let j = 1; j < rec.path.length; j++) {
+        const a = rec.path[j - 1], b = rec.path[j], k = a < b ? a + ':' + b : b + ':' + a;
+        u.set(k, (u.get(k) || 0) + 1);
+      }
+    });
+    /* every route is one continuous road from mark to mark; where routes share a corridor
+       they run side by side in their own lanes, and that is what makes the trunk */
+    const cls = n => n >= 6 ? 3 : n >= 3 ? 2 : n >= 2 ? 1 : 0;
+    const routes = [];
+    this.roadTies.forEach(rec => {
+      if (!rec.path || !this.openAt(rec.tie, asof)) return;
+      const lane = LANES.indexOf(rec.tie.type);
+      if (lane < 0) return;
+      const a = this.markOf[rec.tie.from], b = this.markOf[rec.tie.to];
+      if (!a || !b) return;
+      const mid = rec.path.map(i => [(i % gw + 0.5) * S, ((i / gw | 0) + 0.5) * S]);
+      if (rec.ca !== this.cellOf[rec.tie.from].id) mid.reverse();
+      routes.push({ a: [a.x, a.y], b: [b.x, b.y], mid: mid, lane: lane, type: rec.tie.type, c: cls(rec.tie.n), from: rec.tie.from, to: rec.tie.to });
+    });
+    this.routes = routes;
+    /* ties inside one cell never join the network — they are the street the cell is made of */
+    this.locals = [];
+    this.roadTies.forEach(rec => {
+      if (!rec.sameCell || !this.openAt(rec.tie, asof)) return;
+      const a = this.markOf[rec.tie.from], b = this.markOf[rec.tie.to];
+      if (a && b) this.locals.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, t: rec.tie.type, from: rec.tie.from, to: rec.tie.to });
+    });
+    /* the one-way records: money and stance keep their own painted line on top */
+    this.flows = [];
+    this.roadTies.forEach(rec => {
+      const t = rec.tie;
+      if ((t.type !== 'money' && t.type !== 'stance') || !this.openAt(t, asof)) return;
+      const a = this.markOf[t.from], b = this.markOf[t.to];
+      if (!a || !b) return;
+      const pts = [[a.x, a.y]];
+      if (rec.path) rec.path.forEach(i => pts.push([(i % gw + 0.5) * S, ((i / gw | 0) + 0.5) * S]));
+      pts.push([b.x, b.y]);
+      this.flows.push({ d: pts.map(p => p[0].toFixed(0) + ',' + p[1].toFixed(0)).join(' '), type: t.type, from: t.from, to: t.to, label: t.labels[0] || '' });
+    });
+  }
+
+  pt(i) { return { x: (i % this.gw + 0.5) * this.gridS, y: ((i / this.gw | 0) + 0.5) * this.gridS }; }
+
+  /* ══ what the map view hands the template ══ */
+  mapVals() {
+    const st = this.state, sel = st.sel;
+    /* every line on a map holds its width on the page, not on the ground: widths are
+       authored in screen px and divided by the scale */
+    const kk = Math.max(st.k || 1, 0.35), px = n => n / kk;
+    const RW = [px(1), px(1.8), px(2.8), px(4)];
+    /* Five plates, five hues, held at one lightness so no lane outranks another by
+       accident — money alone prints at full chroma, because it should shout. Selection
+       leaves the hue system entirely and runs as a yellow highlighter beneath the road,
+       so it can never be read as a sixth relationship. */
+    const LANE = {
+      position: { color: 'oklch(0.55 0.13 252)', dash: '' },
+      part_of: { color: 'oklch(0.52 0.13 158)', dash: '' },
+      coappear: { color: 'oklch(0.70 0.09 92)', dash: '' },
+      stance: { color: 'oklch(0.55 0.16 305)', dash: '' },
+      money: { color: 'oklch(0.55 0.23 18)', dash: '' }
+    };
+    const gutter = px(3.4);
+    const chosen = st.selSet.length ? st.selSet : (sel ? [sel] : []);
+    const isChosen = {}; chosen.forEach(id => { isChosen[id] = 1; });
+    const anySel = chosen.length > 0;
+    /* immediate neighbourhood of everything selected */
+    const nbr = {};
+    chosen.forEach(id => {
+      nbr[id] = 1;
+      this.ties.forEach(t => {
+        if (!this.openAt(t, st.asof)) return;
+        if (t.from === id) nbr[t.to] = 1; else if (t.to === id) nbr[t.from] = 1;
+      });
+    });
+    const reach = {};
+    chosen.forEach(id => { (this.reach[id] || []).forEach(o => { reach[o] = 1; }); });
+    const pins = st.pins, isolated = st.isolate && pins.length;
+    const lit = {};
+    if (isolated) pins.forEach(p => { lit[p] = 1; this.ties.forEach(t => { if (t.from === p) lit[t.to] = 1; else if (t.to === p) lit[t.from] = 1; }); });
+
+    const districts = this.districts.map(d => ({
+      x: d.x, y: d.y, w: d.w, h: d.h, depth: d.depth,
+      sw: d.depth <= 1 ? px(3.6) : d.depth === 2 ? px(2.8) : px(2.2),
+      stroke: 'var(--color-text)',
+      fill: reach[d.id] ? 'oklch(0.965 0.05 95)'
+        : 'oklch(' + (0.972 - Math.min(d.depth, 4) * 0.030).toFixed(3) + ' 0.045 ' + (d.hue || 0).toFixed(1) + ')',
+      name: String(d.name || '').toUpperCase(), nx: d.x + px(7), ny: d.y + px(12),
+      fs: px(d.depth <= 1 ? 11 : 8.5),
+      show: false
+    }));
+    const blocks = this.cells.map(c => ({ x: c.x, y: c.y, w: c.w, h: c.h, sw: px(2), fill: 'oklch(0.993 0.008 ' + (c.hue || 0).toFixed(1) + ')' }));
+    const sheet = { w: this.mapSize.w, h: this.mapSize.h };
+    /* the lane offset rides the whole route, corners included, so a road stays one line */
+    const roads = (this.routes || []).map(r => {
+      const off = (r.lane - 2) * gutter, L = LANE[r.type], pts = [];
+      const m = r.mid;
+      for (let i = 0; i < m.length; i++) {
+        const p = m[i], q = m[i + 1] || m[i - 1] || p;
+        let dx = (m[i + 1] ? q[0] - p[0] : p[0] - q[0]), dy = (m[i + 1] ? q[1] - p[1] : p[1] - q[1]);
+        const len = Math.hypot(dx, dy) || 1;
+        pts.push([p[0] - dy / len * off, p[1] + dx / len * off]);
+      }
+      const all = [r.a].concat(pts, [r.b]);
+      const d = all.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+      const owner = isChosen[r.from] ? r.from : (isChosen[r.to] ? r.to : null);
+      const between = isChosen[r.from] && isChosen[r.to];
+      return { d: d, w: RW[r.c], color: L.color, dash: L.dash,
+               marker: r.type === 'money' ? 'url(#arrow)' : '',
+               op: !anySel || owner ? 1 : 0.32, hi: !!owner && !between, between: !!between,
+               wash: owner ? selLivery(chosen, owner).wash : '' };
+    });
+    const locals = (this.locals || []).map(v => {
+      const owner = isChosen[v.from] ? v.from : (isChosen[v.to] ? v.to : null);
+      const between = isChosen[v.from] && isChosen[v.to];
+      return {
+        x1: v.x1, y1: v.y1, x2: v.x2, y2: v.y2,
+        color: (LANE[v.t] || { color: 'var(--color-neutral-400)' }).color,
+        op: !anySel || owner ? 0.9 : 0.3, hi: !!owner && !between, between: !!between,
+        wash: owner ? selLivery(chosen, owner).wash : ''
+      };
+    });
+    /* the highlighter has to reach the internal streets as well, or selecting an entity
+       whose every tie lives inside one block lights nothing at all */
+    const seg = v => v.x1.toFixed(1) + ',' + v.y1.toFixed(1) + ' ' + v.x2.toFixed(1) + ',' + v.y2.toFixed(1);
+    const highlights = roads.filter(r => r.hi).map(r => ({ d: r.d, color: r.wash }))
+      .concat(locals.filter(v => v.hi).map(v => ({ d: seg(v), color: v.wash })));
+    /* a tie running between two selected entities is cased in violet and keeps its lane
+       colour in the core, so it still says what kind of tie it is */
+    const betweens = roads.filter(r => r.between).map(r => ({ d: r.d }))
+      .concat(locals.filter(v => v.between).map(v => ({ d: seg(v) })));
+    const nameLines = [], plateHalo = px(3);
+    this.cells.forEach(c => {
+      if (!c.plate) return;
+      c.plate.lines.forEach((t, i) => nameLines.push({
+        t: [t], x: c.x + 10, y: c.y + 12 + c.plate.fs * (i + 0.85), fs: c.plate.fs, color: 'var(--color-text)', weight: 600, halo: plateHalo
+      }));
+    });
+    this.districts.forEach(d => {
+      const p = d.depth <= 2 ? this.wrapName(d.name, Math.min(d.w * 0.5, 900), 200, null) : null;
+      if (!p) return;
+      p.lines.forEach((t, i) => nameLines.push({
+        t: [t], x: d.x + px(9), y: d.y + px(6) + p.fs * (i + 0.9), fs: p.fs, color: 'var(--color-neutral-600)', weight: 400, halo: plateHalo
+      }));
+    });
+    const marks = [];
+    const k = kk;
+    Object.keys(this.markOf).forEach(id => {
+      const m = this.markOf[id], isSel = !!isChosen[id], pinned = pins.indexOf(id) >= 0;
+      const on = !isolated || lit[id];
+      const near = !anySel || !!nbr[id];
+      const r = px(isSel ? 6.5 : 3.6), side = r * 2.1;
+      marks.push({
+        id: id, x: m.x, y: m.y, isOrg: m.org, isPerson: !m.org, isSel: isSel,
+        r: r, side: side, sw: px(1.2),
+        rx: m.x - side / 2, ry: m.y - side / 2,
+        tx: m.x + side * 0.7 + px(2), ty: m.y + px(3.6),
+        fill: m.org ? (isSel ? selLivery(chosen, id).solid : 'var(--color-bg)') : (isSel ? selLivery(chosen, id).solid : pinned ? 'var(--color-neutral-500)' : 'var(--color-text)'),
+        stroke: m.org ? 'var(--color-text)' : (isSel || pinned ? 'var(--color-text)' : 'var(--color-bg)'),
+        op: on ? (near ? 1 : 0.34) : 0.12,
+        label: [this.shortLabel(id).length > 26 ? this.shortLabel(id).slice(0, 24) + '\u2026' : this.shortLabel(id)],
+        showLabel: isSel || pinned || !!nbr[id] || (!m.org && kk > 1.1),
+        fs: px(11), halo: px(2.8), ring: isSel ? px(11) : 0, ringColor: isSel ? selLivery(chosen, id).solid : 'none',
+        lc: 'var(--color-text)',
+        pick: e => { if (e) e.stopPropagation(); this.pick(id, e && (e.shiftKey || e.metaKey)); }
+      });
+    });
+    const flows = [].map(f => ({
+      d: f.d, color: f.type === 'money' ? '#d6006c' : '#605d5d',
+      w: px(f.type === 'money' ? 2 : 1.4), dash: f.type === 'money' ? '' : px(5) + ' ' + px(3.5),
+      marker: f.type === 'money' ? 'url(#arrow)' : ''
+    }));
+    const trace = this.tracePaths();
+    return {
+      districts: districts, blocks: blocks, sheet: sheet, roads: roads, highlights: highlights, betweens: betweens, wHi: px(9), wBetween: px(11), marks: marks, flows: flows, nameLines: nameLines,
+      drives: this.drives, locals: locals, trace: trace,
+      wDrive: px(0.35), wLocal: px(0.9), wTrace: px(3),
+      asof: st.asof, asofNum: this.dateNum(st.asof),
+      onAsof: e => {
+        const v = this.numDate(+e.target.value);
+        this.setState({ asof: v }, () => { this.traffic(v); this.forceUpdate(); });
+      },
+      pinList: pins.map(id => ({ name: this.nameOf(id), drop: () => this.setState({ pins: pins.filter(p => p !== id) }) })),
+      pinSel: () => {
+        const add = chosen.filter(id => pins.indexOf(id) < 0);
+        if (add.length) this.setState({ pins: pins.concat(add) });
+      },
+      restorePins: () => { if (pins.length) this.setState({ selSet: pins.slice(), sel: pins[pins.length - 1] }); },
+      isolate: st.isolate ? 'showing only pinned' : 'show only pinned',
+      toggleIsolate: () => this.setState({ isolate: !st.isolate }),
+      traceA: st.traceA ? this.nameOf(st.traceA) : 'from \u2014 click a mark, then set',
+      traceB: st.traceB ? this.nameOf(st.traceB) : 'to \u2014 click a mark, then set',
+      setA: () => this.setState({ traceA: sel }), setB: () => this.setState({ traceB: sel }),
+      clearTrace: () => this.setState({ traceA: null, traceB: null }),
+      traceNote: this.traceNote || ''
+    };
+  }
+
+  dateNum(s) { const p = String(s || '').split('-'); return (+p[0] || 2026) * 12 + (+(p[1] || 1) - 1); }
+  numDate(n) { const y = Math.floor(n / 12), m = n % 12 + 1; return y + '-' + (m < 10 ? '0' : '') + m + '-01'; }
+
+  /* shortest chain of ties between two entities, drawn over the roads it uses */
+  tracePaths() {
+    const st = this.state;
+    this.traceNote = '';
+    if (!st.traceA || !st.traceB) return [];
+    const adj = {};
+    this.ties.forEach(t => {
+      if (!this.openAt(t, st.asof)) return;
+      (adj[t.from] = adj[t.from] || []).push(t.to);
+      (adj[t.to] = adj[t.to] || []).push(t.from);
+    });
+    const prev = { [st.traceA]: null }, q = [st.traceA];
+    let found = false;
+    while (q.length && !found) {
+      const cur = q.shift();
+      const ns = adj[cur] || [];
+      for (let i = 0; i < ns.length; i++) {
+        if (ns[i] in prev) continue;
+        prev[ns[i]] = cur;
+        if (ns[i] === st.traceB) { found = true; break; }
+        q.push(ns[i]);
+      }
+    }
+    if (!found) { this.traceNote = 'no chain between them on this date'; return []; }
+    const chain = [st.traceB];
+    while (prev[chain[0]]) chain.unshift(prev[chain[0]]);
+    this.traceNote = chain.map(id => this.nameOf(id)).join('  \u2192  ');
+    const out = [], S = this.gridS, gw = this.gw;
+    for (let i = 1; i < chain.length; i++) {
+      const a = this.markOf[chain[i - 1]], b = this.markOf[chain[i]];
+      if (!a || !b) continue;
+      const rec = this.roadTies.filter(r => (r.tie.from === chain[i - 1] && r.tie.to === chain[i]) || (r.tie.to === chain[i - 1] && r.tie.from === chain[i]))[0];
+      const pts = [[a.x, a.y]];
+      if (rec && rec.path) {
+        const p = rec.path.slice();
+        if (rec.tie.from !== chain[i - 1]) p.reverse();
+        p.forEach(j => pts.push([(j % gw + 0.5) * S, ((j / gw | 0) + 0.5) * S]));
+      }
+      pts.push([b.x, b.y]);
+      out.push({ d: pts.map(p => p[0].toFixed(0) + ',' + p[1].toFixed(0)).join(' ') });
+    }
+    return out;
+  }
+
+  treeRows() {
+    const out = [], open = this.state.open || {};
+    const walk = (id, depth) => {
+      const kids = this.kids[id] || [];
+      out.push({ id: id, depth: depth, kids: kids.length });
+      if (open[id]) kids.forEach(k => walk(k, depth + 1));
+    };
+    this.roots.forEach(id => walk(id, 0));
+    return out;
+  }
+
+  orgMeta(id) {
+    const p = this.posts[id] || { all: 0, live: 0 }, k = (this.kids[id] || []).length, r = this.evc[id] || 0, bits = [];
+    if (k) bits.push(k + (k === 1 ? ' body' : ' bodies'));
+    if (p.all) bits.push(p.live ? p.live + ' in post' : p.all + ' former');
+    if (r) bits.push(r + ' rec');
+    return bits.join('  \u00b7  ');
+  }
+
+  money(v) { return BraidCore.money(v); }
+  nameOf(id) { return BraidCore.nameOf(this.model, id); }
+  isOrg(id) { return BraidCore.isOrg(this.model, id); }
+  shortLabel(id) { return BraidCore.shortLabel(this.model, id); }
+  live(p) { return BraidCore.live(p); }
+
+  /* ---------- the filtered subgraph, laid out ---------- */
+  rebuild() {
+    const st = this.state, keep = {}, edges = [];
+    this.ties.forEach(t => {
+      if (!st.tie[t.type]) return;
+      const ka = this.isOrg(t.from) ? 'org' : 'person', kb = this.isOrg(t.to) ? 'org' : 'person';
+      if (!st.ent[ka] || !st.ent[kb]) return;
+      if (st.scope === 'records' && !(this.evc[t.from] || this.evc[t.to])) return;
+      keep[t.from] = 1; keep[t.to] = 1; edges.push(t);
+    });
+    const nodes = Object.keys(keep).map(id => {
+      const org = this.isOrg(id), ev = this.evc[id] || 0;
+      return { id: id, org: org, ev: ev, label: this.shortLabel(id), name: this.nameOf(id), deg: 0,
+               r: org ? 0 : 3 + Math.sqrt(ev) * 2.6, m: 1 + Math.sqrt(ev) * 0.6, x: 0, y: 0, vx: 0, vy: 0 };
+    });
+    const idx = {}; nodes.forEach((n, i) => { idx[n.id] = i; });
+    edges.forEach(e => { nodes[idx[e.from]].deg++; nodes[idx[e.to]].deg++; });
+    nodes.forEach(n => { if (n.org) n.side = 5 + Math.min(Math.sqrt(n.deg) * 2.2, 9); });
+    this.layout(nodes, edges, idx);
+    this.idx = idx;
+    this.setState({ nodes: nodes, edges: edges, busy: false }, () => {
+      if (this.state.mode === 'map') this.openView(); else this.fit();
+    });
+  }
+
+  /* the record is one big component plus a tail of small ones; simulating them together
+     lets the orphans drift and wrecks the fit, so the main body is simulated and the rest
+     are set as a tidy tray beneath it */
+  layout(ns, es, idx) {
+    if (!ns.length) return;
+    const parent = ns.map((_, i) => i), find = i => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    es.forEach(e => { const a = find(idx[e.from]), b = find(idx[e.to]); if (a !== b) parent[a] = b; });
+    const groups = {};
+    ns.forEach((n, i) => { const r = find(i); (groups[r] = groups[r] || []).push(n); });
+    const comps = Object.keys(groups).map(k => groups[k]).sort((a, b) => b.length - a.length);
+    const main = comps[0], rest = comps.slice(1);
+    const inMain = {}; main.forEach(n => { inMain[n.id] = 1; });
+    this.sim(main, es.filter(e => inMain[e.from]));
+
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    main.forEach(n => { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); });
+    const spread = this.props.spread || 1;
+    this.bounds = { x0: x0, y0: y0, x1: x1, y1: y1 };
+    let cx = x0, cy = y1 + 130 * spread, rowH = 0;
+    const wide = Math.max(x1 - x0, 600);
+    rest.forEach(g => {
+      const rad = g.length <= 1 ? 0 : 26 * spread + g.length * 5;
+      const w = Math.max(rad * 2, 90) + 46;
+      if (cx - x0 + w > wide) { cx = x0; cy += rowH + 70 * spread; rowH = 0; }
+      g.forEach((n, i) => {
+        const a = i / g.length * Math.PI * 2;
+        n.x = cx + w / 2 + Math.cos(a) * rad; n.y = cy + Math.sin(a) * rad;
+      });
+      rowH = Math.max(rowH, rad * 2); cx += w;
+    });
+  }
+
+  sim(ns, es) {
+    const n = ns.length; if (!n) return;
+    const spread = this.props.spread || 1, R = Math.sqrt(n) * 34 * spread;
+    ns.forEach((d, i) => { const a = i * 2.399963, r = R * Math.sqrt((i + 1) / n); d.x = Math.cos(a) * r; d.y = Math.sin(a) * r; d.vx = 0; d.vy = 0; });
+    const at = {}; ns.forEach(d => { at[d.id] = d; });
+    const links = es.map(e => ({ a: at[e.from], b: at[e.to], d: TIE[e.type].dist * spread, k: e.type === 'coappear' ? 0.05 : 0.10 })).filter(l => l.a && l.b);
+    let alpha = 1;
+    for (let it = 0; it < 420; it++) {
+      alpha *= 0.9945;
+      for (let i = 0; i < n; i++) {
+        const a = ns[i];
+        for (let j = i + 1; j < n; j++) {
+          const b = ns[j];
+          let dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy;
+          if (d2 === 0) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = dx * dx + dy * dy; }
+          if (d2 > 640000) continue;
+          const d = Math.sqrt(d2), f = alpha * 5200 * a.m * b.m / Math.max(d2, 36), ux = dx / d, uy = dy / d;
+          a.vx -= ux * f; a.vy -= uy * f; b.vx += ux * f; b.vy += uy * f;
+        }
+      }
+      for (let i = 0; i < links.length; i++) {
+        const l = links[i], a = l.a, b = l.b;
+        let dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.sqrt(dx * dx + dy * dy) || 0.01, f = (d - l.d) / d * l.k * alpha;
+        dx *= f; dy *= f; a.vx += dx; a.vy += dy; b.vx -= dx; b.vy -= dy;
+      }
+      for (let i = 0; i < n; i++) {
+        const d = ns[i];
+        d.vx -= d.x * 0.010 * alpha; d.vy -= d.y * 0.010 * alpha;
+        d.x += d.vx; d.y += d.vy; d.vx *= 0.72; d.vy *= 0.72;
+      }
+    }
+  }
+
+  /* ---------- view ---------- */
+  /* pan and zoom are applied straight to the group so dragging never re-renders the graph;
+     only the type has to follow the scale, so the scale is settled back into state on rest */
+  /* the map and the graph are different geographies, so they cannot share one camera.
+     Each keeps its own {k,x,y}; entering a tab restores it, or frames it on first visit. */
+  enterView = mode => {
+    const from = this.state.mode;
+    this.cams = this.cams || {};
+    if (from === 'map' || from === 'graph') this.cams[from] = Object.assign({}, this.view);
+    this.setState({ mode: mode }, () => {
+      if (mode !== 'map' && mode !== 'graph') return;
+      const cam = this.cams[mode];
+      if (cam) { this.view = Object.assign({}, cam); this.setState({ k: cam.k }, () => this.apply()); return; }
+      if (mode === 'map') this.openView(); else this.fit();
+    });
+  };
+
+  apply() {
+    if (this.gRef.current) this.gRef.current.setAttribute('transform', 'translate(' + this.view.x + ',' + this.view.y + ') scale(' + this.view.k + ')');
+    if (this.view.k !== this.state.k) {
+      clearTimeout(this._kt);
+      this._kt = setTimeout(() => this.setState({ k: this.view.k }), 140);
+    }
+  }
+  /* a map opens at a scale you can read, over the busiest ground — fit is a command,
+     not the resting state */
+  openView = () => {
+    const el = this.svgRef.current;
+    if (!el || !this.districts || !this.districts.length) return;
+    const b = el.getBoundingClientRect();
+    let best = this.districts[0], bestN = -1;
+    this.districts.forEach(d => {
+      let n = 0;
+      this.cells.forEach(c => { if (c.x >= d.x && c.x < d.x + d.w && c.y >= d.y && c.y < d.y + d.h) n += (c.items || []).length; });
+      if (n > bestN) { bestN = n; best = d; }
+    });
+    const k = Math.min(1.05, Math.max(0.55, Math.min(b.width / Math.max(best.w, 1), b.height / Math.max(best.h, 1)) * 1.25));
+    this.view = { k: k, x: b.width / 2 - (best.x + best.w / 2) * k, y: b.height / 2 - (best.y + best.h / 2) * k };
+    this.apply();
+  };
+
+  fit = () => {
+    const ns = this.state.nodes, el = this.svgRef.current;
+    if (!el) return;
+    const b = el.getBoundingClientRect();
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    if (this.state.mode === 'map' && this.mapSize) {
+      const k = Math.min((b.width - 24) / this.mapSize.w, (b.height - 24) / this.mapSize.h);
+      this.view = { k: k, x: (b.width - this.mapSize.w * k) / 2, y: (b.height - this.mapSize.h * k) / 2 };
+      this.apply(); return;
+    }
+    if (!ns.length) return;
+    if (this.bounds) {
+      /* names hang off the marks, so the fitted box is the node box grown by the room they take */
+      const m = (this.bounds.x1 - this.bounds.x0) * 0.09;
+      x0 = this.bounds.x0 - m; y0 = this.bounds.y0 - m * 0.4; x1 = this.bounds.x1 + m; y1 = this.bounds.y1 + m * 0.4;
+    }
+    else ns.forEach(n => { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); });
+    const pad = Math.min(92, b.width * 0.12, b.height * 0.12); /* room for the names, which sit outside the node bounds */
+    let k = Math.min((b.width - pad * 2) / Math.max(x1 - x0, 1), (b.height - pad * 2) / Math.max(y1 - y0, 1));
+    k = Math.max(0.18, Math.min(k, 1.6));
+    this.view = { k: k, x: b.width / 2 - (x0 + x1) / 2 * k, y: b.height / 2 - (y0 + y1) / 2 * k };
+    this.apply();
+  };
+  zoomBy(f, cx, cy) {
+    const v = this.view, k = Math.max(0.15, Math.min(6, v.k * f));
+    v.x = cx - (cx - v.x) * (k / v.k); v.y = cy - (cy - v.y) * (k / v.k); v.k = k; this.apply();
+  }
+  centerOn(id) {
+    const n = this.state.mode === 'map' ? (this.markOf || {})[id] : this.state.nodes.filter(m => m.id === id)[0];
+    const el = this.svgRef.current;
+    if (!n || !el) return;
+    const b = el.getBoundingClientRect(), k = Math.max(this.view.k, 1.1);
+    this.view = { k: k, x: b.width / 2 - n.x * k, y: b.height / 2 - n.y * k }; this.apply();
+  }
+
+  onWheel = e => {
+    e.preventDefault();
+    const b = this.svgRef.current.getBoundingClientRect();
+    this.zoomBy(e.deltaY < 0 ? 1.12 : 0.893, e.clientX - b.left, e.clientY - b.top);
+  };
+  onDown = e => { this.drag = { x: e.clientX, y: e.clientY, moved: false }; };
+  onMove = e => {
+    if (!this.drag) return;
+    const dx = e.clientX - this.drag.x, dy = e.clientY - this.drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) this.drag.moved = true;
+    this.view.x += dx; this.view.y += dy; this.drag.x = e.clientX; this.drag.y = e.clientY; this.apply();
+  };
+  onUp = () => { const d = this.drag; this.drag = null; this._moved = d && d.moved; };
+
+  /* clicking the selected mark again, or the empty sheet, clears the selection */
+  pick(id, add) {
+    if (this._moved) { this._moved = false; return; }
+    const set = this.state.selSet;
+    if (add) {
+      const next = set.indexOf(id) >= 0 ? set.filter(x => x !== id) : set.concat([id]);
+      this.setState({ selSet: next, sel: next.length ? next[next.length - 1] : null, q: '' });
+      return;
+    }
+    if (this.state.sel === id && set.length <= 1) { this.setState({ sel: null, selSet: [] }); return; }
+    this.setState({ sel: id, selSet: [id], q: '' }, () => this.centerOn(id));
+  }
+  clearSel = () => {
+    if (!this._moved && this.state.sel) this.setState({ sel: null, selSet: [] });
+    this._moved = false;
+  };
+  toggle(group, k) {
+    const g = Object.assign({}, this.state[group]); g[k] = !g[k];
+    const patch = {}; patch[group] = g;
+    this.setState(patch, () => this.rebuild());
+  }
+
+  /* ---------- reading panel ---------- */
+  selVals(id) {
+    const org = this.isOrg(id), rec = org ? this.orgMap[id] : this.actorMap[id];
+    if (!rec) return null;
+    const positions = org
+      ? (this.db.actors || []).reduce((acc, a) => acc.concat((a.positions || []).filter(p => p.entity === id).map(p => ({ p: p, who: a.name }))), [])
+          .slice(0, 14).map(x => ({ title: x.who + ' \u2014 ' + (x.p.title || ''), when: this.live(x.p) ? '' : '  (former)', color: this.live(x.p) ? 'var(--color-text)' : 'var(--color-neutral-500)' }))
+      : (rec.positions || []).map(p => ({ title: (p.title || '') + (this.orgMap[p.entity] ? ',  ' + this.shortLabel(p.entity) : ''), when: this.live(p) ? '' : '  (former)', color: this.live(p) ? 'var(--color-text)' : 'var(--color-neutral-500)' }));
+    const ties = this.ties.filter(t => t.from === id || t.to === id).sort((a, b) => ORDER.indexOf(a.type) - ORDER.indexOf(b.type)).slice(0, 40).map(t => {
+      const other = t.from === id ? t.to : t.from, out = t.from === id;
+      const verb = t.type === 'position' ? (out ? 'post at' : 'post held by')
+        : t.type === 'part_of' ? (out ? 'part of' : 'contains')
+        : t.type === 'money' ? (out ? 'money to' : 'money from')
+        : t.type === 'stance' ? (out ? 'stance toward' : 'stance from') : 'appears with';
+      return { verb: verb, otherId: other, color: t.type === 'coappear' || t.type === 'position' || t.type === 'part_of' ? 'var(--color-neutral-600)' : TIE[t.type].color,
+               other: this.nameOf(other), detail: (t.labels[0] || '') + (t.n > 1 ? '  (' + t.n + ' records)' : ''), pick: () => this.pick(other) };
+    });
+    const events = (this.evOf[id] || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(ev => ({
+      date: ev.date || '', confidence: ev.confidence || '', color: CONF[ev.confidence] || 'var(--color-neutral-600)',
+      summary: ev.summary || '', sources: (ev.sources || []).map(s => ({ outlet: s.outlet, url: s.url }))
+    }));
+    const blocs = (rec.blocs || []).map(b => b.label).join(', ');
+    const cur = org ? '' : ((rec.positions || []).filter(p => this.live(p))[0] || {}).title || '';
+    return {
+      kind: org ? String(rec.type || 'organization').replace(/_/g, ' ') : 'person', slot: 'portrait-' + id,
+      name: rec.name, sub: org ? (blocs || '') : (cur + (blocs ? '  \u00b7  ' + blocs : '')),
+      notes: rec.notes || '', hasNotes: !!rec.notes,
+      positions: positions, hasPositions: positions.length > 0,
+      ties: ties, hasTies: ties.length > 0,
+      events: events, hasEvents: events.length > 0
+    };
+  }
+
+  renderVals() {
+    if (!this._ref) { this._ref = React.createRef(); this.svgRef = React.createRef(); this.gRef = React.createRef(); }
+    const st = this.state, sel = st.sel, hover = st.hover, near = {};
+    if (sel || hover) {
+      const focus = hover || sel;
+      near[focus] = 1;
+      st.edges.forEach(e => { if (e.from === focus) near[e.to] = 1; else if (e.to === focus) near[e.from] = 1; });
+    }
+    const dim = !!(sel || hover);
+    const showAll = !!this.props.showAllLabels;
+
+    const k = st.k || 1;
+    /* label the graph like a map: rank by weight in the record, then drop any name whose
+       box would collide with one already set */
+    const fsOf = n => (n.id === sel ? 13 : (n.ev > 1 ? 11.5 : 10.5)) / k;
+    const boxes = [], placed = {};
+    st.nodes.slice().sort((a, b) => (b.ev - a.ev) || (b.deg - a.deg)).forEach(n => {
+      const forced = n.id === sel || n.id === hover;
+      if (!forced && !(showAll || n.ev > 0 || (k > 0.7 && n.deg > 2) || k > 1.3)) return;
+      if (dim && !near[n.id] && !forced) return;
+      const fs = fsOf(n), txt = n.label.length > 24 ? n.label.slice(0, 22) + '\u2026' : n.label;
+      const gut = 4 / k, off = (n.org ? (n.side || 6) / 2 : n.r) + 4 / k;
+      const w = txt.length * fs * 0.56, top = n.y - fs * 0.75 - gut * 0.5, bot = n.y + fs * 0.75 + gut * 0.5;
+      /* four berths around the mark. Another name in the way disqualifies a berth outright;
+         sitting on a heavier entity's mark only makes a berth worse than the alternatives,
+         since the paper halo carries the name over what it crosses. */
+      const overName = b => {
+        for (let i = 0; i < boxes.length; i++) {
+          const p = boxes[i];
+          if (!(b.x1 < p.x0 || b.x0 > p.x1 || b.y1 < p.y0 || b.y0 > p.y1)) return true;
+        }
+        return false;
+      };
+      const overMark = b => {
+        const wt = n.ev + n.deg * 0.25;
+        for (let i = 0; i < st.nodes.length; i++) {
+          const m = st.nodes[i];
+          if (m === n || (m.ev + m.deg * 0.25) <= wt) continue;
+          if (m.x > b.x0 && m.x < b.x1 && m.y > b.y0 && m.y < b.y1) return true;
+        }
+        return false;
+      };
+      const lift = fs * 1.35;
+      const berths = [
+        { b: { x0: n.x + off - gut, y0: top, x1: n.x + off + w + gut, y1: bot }, anchor: 'start', lx: off, ly: 0 },
+        { b: { x0: n.x - off - w - gut, y0: top, x1: n.x - off + gut, y1: bot }, anchor: 'end', lx: -off, ly: 0 },
+        { b: { x0: n.x - w / 2 - gut, y0: top - lift, x1: n.x + w / 2 + gut, y1: bot - lift }, anchor: 'middle', lx: 0, ly: -lift },
+        { b: { x0: n.x - w / 2 - gut, y0: top + lift, x1: n.x + w / 2 + gut, y1: bot + lift }, anchor: 'middle', lx: 0, ly: lift }
+      ];
+      const free = berths.filter(c => !overName(c.b));
+      if (!free.length && !forced) return;
+      const pickBerth = free.filter(c => !overMark(c.b))[0] || free[0] || berths[0];
+      boxes.push(pickBerth.b);
+      placed[n.id] = { txt: txt, anchor: pickBerth.anchor, lx: pickBerth.lx, dy: pickBerth.ly };
+    });
+
+    const nodes = st.nodes.map(n => {
+      const on = !dim || near[n.id], isSel = n.id === sel;
+      const label = !!placed[n.id];
+      return {
+        id: n.id, tf: 'translate(' + n.x.toFixed(1) + ',' + n.y.toFixed(1) + ')',
+        isOrg: n.org, isPerson: !n.org, r: n.r, side: n.side, ox: -(n.side || 0) / 2,
+        fill: n.org ? (isSel ? '#0088b0' : 'var(--color-bg)') : (isSel ? '#0088b0' : 'var(--color-text)'),
+        stroke: n.org ? (isSel ? '#0088b0' : 'var(--color-text)') : 'var(--color-bg)',
+        sw: n.org ? 1.4 : 0.8, op: on ? 1 : 0.18,
+        showLabel: label, label: [label ? placed[n.id].txt : n.label], ly: (label ? placed[n.id].dy : 0) + 3.6 / k,
+        lx: label ? placed[n.id].lx : 0, anchor: label ? placed[n.id].anchor : 'start',
+        halo: 3 / k, fs: fsOf(n), lc: 'var(--color-text)',
+        lop: on ? (isSel || n.ev > 0 ? 1 : 0.75) : 0.12,
+        pick: e => { if (e) e.stopPropagation(); this.pick(n.id); },
+        enter: () => this.setState({ hover: n.id }), leave: () => this.setState({ hover: null })
+      };
+    });
+    const pos = {}; st.nodes.forEach(n => { pos[n.id] = n; });
+    const edges = st.edges.map(e => {
+      const a = pos[e.from], b = pos[e.to], t = TIE[e.type];
+      const on = !dim || (near[e.from] && near[e.to] && (e.from === (hover || sel) || e.to === (hover || sel)));
+      return { x1: a.x.toFixed(1), y1: a.y.toFixed(1), x2: b.x.toFixed(1), y2: b.y.toFixed(1),
+               color: t.color, dash: t.dash, w: t.w + Math.min(e.n - 1, 3) * 0.35,
+               op: on ? (e.type === 'coappear' ? 0.75 : 0.9) : 0.08 };
+    });
+
+    const counts = {}; ORDER.forEach(k => { counts[k] = 0; });
+    (this.ties || []).forEach(t => { counts[t.type]++; });
+    const tieFilters = ORDER.map(k => ({
+      key: k, label: TIE[k].label, count: counts[k], op: st.tie[k] ? 1 : 0.35,
+      rule: (TIE[k].dash ? '1.5px dashed ' : '1.5px solid ') + TIE[k].color,
+      toggle: () => this.toggle('tie', k)
+    }));
+    const nPerson = st.nodes.filter(n => !n.org).length;
+    const entFilters = [
+      { key: 'person', label: 'people', mark: '\u25cf', count: nPerson, op: st.ent.person ? 1 : 0.35, toggle: () => this.toggle('ent', 'person') },
+      { key: 'org', label: 'institutions', mark: '\u25a1', count: st.nodes.length - nPerson, op: st.ent.org ? 1 : 0.35, toggle: () => this.toggle('ent', 'org') }
+    ];
+    const scopes = [['records', 'in the record'], ['everything', 'everything']].map(s => ({
+      label: s[1], mark: st.scope === s[0] ? '\u2014' : '\u00b7', color: st.scope === s[0] ? 'var(--color-text)' : 'var(--color-neutral-500)',
+      pick: () => this.setState({ scope: s[0] }, () => this.rebuild())
+    }));
+
+    const q = st.q.trim().toLowerCase();
+    const pool = st.mode === 'tree'
+      ? (this.db ? this.db.orgs.map(o => ({ id: o.id, name: o.name })) : [])
+      : st.nodes;
+    const results = q.length < 2 ? [] : pool.filter(n => n.name.toLowerCase().indexOf(q) >= 0).slice(0, 9)
+      .map(n => ({ name: n.name, pick: () => this.pick(n.id) }));
+    const top = st.nodes.slice().sort((a, b) => (b.ev - a.ev) || (b.deg - a.deg)).slice(0, 12)
+      .map(n => ({ name: n.name, deg: n.ev ? n.ev + ' rec' : n.deg + ' ties', pick: () => this.pick(n.id) }));
+
+    const isTree = st.mode === 'tree';
+    const FS = [19, 16, 14.5, 13.5];
+    const rows = isTree ? this.treeRows().map(r => {
+      const o = this.orgMap[r.id], isSel = r.id === sel;
+      return {
+        id: r.id, name: (o.acronym ? o.acronym + '  \u2014  ' : '') + String(o.name || '').replace(/\s*\([^)]*\)\s*$/, ''),
+        pad: '5px 4px 5px ' + (r.depth * 24 + 2) + 'px',
+        fs: (FS[Math.min(r.depth, 3)]) + 'px', fw: r.depth === 0 ? 600 : 400, style: 'normal',
+        color: isSel ? 'var(--color-accent-700)' : (r.depth > 1 ? 'var(--color-neutral-800)' : 'var(--color-text)'),
+        caret: r.kids ? (st.open[r.id] ? '\u2013' : '+') : '',
+        meta: this.orgMeta(r.id),
+        pick: () => this.setState({ sel: r.id }),
+        toggle: e => {
+          e.stopPropagation();
+          if (!r.kids) return;
+          const open = Object.assign({}, st.open); open[r.id] = !open[r.id];
+          this.setState({ open: open });
+        }
+      };
+    }) : [];
+    const singles = isTree ? this.loose.map(id => ({
+      name: this.nameOf(id), meta: '  \u00b7  ' + String(this.orgMap[id].type || '').replace(/_/g, ' '),
+      color: id === sel ? 'var(--color-accent-700)' : 'var(--color-text)',
+      pick: () => this.setState({ sel: id })
+    })) : [];
+    const views = (window.BraidViews || []).filter(v => v.ready).map(v => [v.id, v.label]).map(v => ({
+      label: v[1], color: st.mode === v[0] ? 'var(--color-text)' : 'var(--color-neutral-500)',
+      rule: st.mode === v[0] ? '2px solid var(--color-accent)' : '2px solid transparent',
+      pick: () => this.enterView(v[0])
+    }));
+
+    const isMap = st.mode === 'map';
+    const chosen = st.selSet.length ? st.selSet : (sel ? [sel] : []);
+    const isChosen = {}; chosen.forEach(id => { isChosen[id] = 1; });
+    const anySel = chosen.length > 0;
+    return Object.assign(isMap && this.markOf ? this.mapVals() : {}, {
+      rootRef: this._ref, svgRef: this.svgRef, gRef: this.gRef,
+      cols: (st.railL ? '216px' : '34px') + ' minmax(0,1fr) ' + (st.railR ? '340px' : '34px'),
+      railLOpen: st.railL, railLShut: !st.railL, railROpen: st.railR, railRShut: !st.railR,
+      openL: () => this.setState({ railL: true }), shutL: () => this.setState({ railL: false }),
+      openR: () => this.setState({ railR: true }), shutR: () => this.setState({ railR: false }),
+      views: views, isGraph: st.mode === 'graph', isTree: isTree, isMap: isMap,
+      isStage: isMap || st.mode === 'graph', rows: rows, singles: singles,
+      treeNote: this.roots ? this.db.orgs.filter(o => o.part_of && this.orgMap[o.part_of]).length + ' of ' + this.db.orgs.length + ' bodies nest inside another; the rest stand alone.' : '',
+      expandAll: () => { const open = {}; Object.keys(this.kids).forEach(k => { open[k] = true; }); this.setState({ open: open }); },
+      collapseAll: () => this.setState({ open: {} }),
+      nodes: nodes, edges: edges, tieFilters: tieFilters, entFilters: entFilters, scopes: scopes,
+      query: st.q, onQuery: e => this.setState({ q: e.target.value }), results: results, top: top,
+      busy: st.busy || !!st.err, busyText: st.err ? 'The braid did not load' : 'Laying out the braid',
+      stats: isMap ? (this.districts ? this.districts.length + ' districts \u00b7 ' + this.cells.length + ' blocks \u00b7 ' + this.ties.length + ' ties' : '')
+        : isTree ? (this.db ? this.db.orgs.length + ' bodies \u00b7 ' + this.roots.length + ' structures' : '')
+        : st.nodes.length + ' entities \u00b7 ' + st.edges.length + ' ties',
+      hasSel: anySel, noSel: !anySel,
+      selCount: chosen.length === 1 ? 'Selected' : chosen.length + ' selected',
+      selHint: chosen.length === 1 ? 'Shift-click another mark to compare. Its neighbours are lit; ties between selections are cased in violet.' : 'Violet marks a tie running directly between two of your selections.',
+      records: chosen.map((id, i) => {
+        const v = this.selVals(id);
+        if (!v) return { id: id, name: id, kind: '', open: false, caret: '+', toggle: () => {}, drop: () => {} };
+        const openIt = st.recOpen[id] !== undefined ? st.recOpen[id] : i === chosen.length - 1;
+        v.id = id; v.open = openIt; v.caret = openIt ? '\u2013' : '+'; v.swatch = selLivery(chosen, id).solid;
+        v.between = v.ties.filter(t => isChosen[t.otherId] && t.otherId !== id);
+        v.hasBetween = v.between.length > 0;
+        v.toggle = () => { const o = Object.assign({}, st.recOpen); o[id] = !openIt; this.setState({ recOpen: o }); };
+        v.drop = e => {
+          if (e) e.stopPropagation();
+          const next = chosen.filter(x => x !== id);
+          this.setState({ selSet: next, sel: next.length ? next[next.length - 1] : null });
+        };
+        return v;
+      }),
+      onWheel: this.onWheel, onDown: this.onDown, onMove: this.onMove, onUp: this.onUp, clearSel: this.clearSel,
+      selName: sel ? this.nameOf(sel) : '',
+      zoomIn: () => { const b = this.svgRef.current.getBoundingClientRect(); this.zoomBy(1.25, b.width / 2, b.height / 2); },
+      zoomOut: () => { const b = this.svgRef.current.getBoundingClientRect(); this.zoomBy(0.8, b.width / 2, b.height / 2); },
+      fit: this.fit
+    });
+  }
+}
+</script>
+</body>
+</html>
